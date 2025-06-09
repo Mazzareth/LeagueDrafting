@@ -31,13 +31,13 @@ Your project is live at:
 
 ## Persistence System
 
-The application uses a custom multi-layer persistence system:
+The application uses an environment-aware persistence system:
 
-1. **In-memory storage**: For fast access during normal operation
-2. **File-based storage**: For persistence across server restarts
+1. **Development Environment**: Uses in-memory storage for fast access during development
+2. **Serverless Environment**: Uses a specialized in-memory store optimized for serverless functions
 3. **Client-side localStorage**: For additional redundancy on the client
 
-This ensures drafts remain accessible even after server restarts or deployments.
+This approach ensures compatibility with serverless platforms like Vercel while maintaining draft persistence during the TTL period.
 
 ## How It Works
 

@@ -1,47 +1,39 @@
 import type { DraftInstance } from "@/types/draft"
 import * as memoryStore from "./draft-store"
-import * as fileStore from "./file-draft-store"
+import * as serverlessStore from "./serverless-draft-store"
 
-// This store combines memory and file storage for maximum reliability
-// Memory store provides fast access, while file store provides persistence across restarts
+// Detect if we're running in a serverless environment
+const isServerless = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined
 
+// Choose the appropriate store based on environment
+const store = isServerless ? serverlessStore : memoryStore
+
+// This store uses the appropriate implementation based on the environment
 export async function getDraft(id: string): Promise<DraftInstance | null> {
-  console.log(`[PersistentStore] getDraft: Looking for draft "${id}"`)
+  console.log(`[PersistentStore] getDraft: Looking for draft "${id}" (Serverless: ${isServerless})`)
   
-  // First try memory store for speed
-  const memoryDraft = await memoryStore.getDraft(id)
-  if (memoryDraft) {
-    console.log(`[PersistentStore] getDraft: Found draft "${id}" in memory store.`)
-    return memoryDraft
+  try {
+    const draft = await store.getDraft(id)
+    
+    if (draft) {
+      console.log(`[PersistentStore] getDraft: Found draft "${id}".`)
+      return draft
+    }
+    
+    console.warn(`[PersistentStore] getDraft: Draft "${id}" not found.`)
+    return null
+  } catch (error) {
+    console.error(`[PersistentStore] getDraft: Error getting draft "${id}":`, error)
+    return null
   }
-  
-  // If not in memory, try file store
-  console.log(`[PersistentStore] getDraft: Draft "${id}" not in memory, checking file store.`)
-  const fileDraft = await fileStore.getDraft(id)
-  
-  if (fileDraft) {
-    console.log(`[PersistentStore] getDraft: Found draft "${id}" in file store, adding to memory.`)
-    // Add to memory store for faster access next time
-    await memoryStore.saveDraft(fileDraft)
-    return fileDraft
-  }
-  
-  console.warn(`[PersistentStore] getDraft: Draft "${id}" not found in any store.`)
-  return null
 }
 
 export async function saveDraft(draft: DraftInstance): Promise<void> {
-  console.log(`[PersistentStore] saveDraft: Saving draft "${draft.id}" to all stores.`)
+  console.log(`[PersistentStore] saveDraft: Saving draft "${draft.id}" (Serverless: ${isServerless})`)
   
-  // Save to both stores
   try {
-    // Save to memory first for immediate availability
-    await memoryStore.saveDraft(draft)
-    
-    // Then save to file for persistence
-    await fileStore.saveDraft(draft)
-    
-    console.log(`[PersistentStore] saveDraft: Successfully saved draft "${draft.id}" to all stores.`)
+    await store.saveDraft(draft)
+    console.log(`[PersistentStore] saveDraft: Successfully saved draft "${draft.id}".`)
   } catch (error) {
     console.error(`[PersistentStore] saveDraft: Error saving draft "${draft.id}":`, error)
     throw error
@@ -49,6 +41,5 @@ export async function saveDraft(draft: DraftInstance): Promise<void> {
 }
 
 export function generateDraftId(): string {
-  // Use either implementation, they do the same thing
-  return memoryStore.generateDraftId()
+  return store.generateDraftId()
 }
