@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getDraft, saveDraft, generateDraftId } from '@/lib/memory-draft-store'
+import { getDraft, saveDraft, generateDraftId } from '@/lib/persistent-draft-store'
 import { fetchChampions } from '@/lib/fetch-champions'
 import type { DraftInstance } from '@/types/draft'
 import { DRAFT_ORDER } from '@/types/draft'
