@@ -123,12 +123,29 @@ export async function getDraft(id: string): Promise<DraftInstance | null> {
   console.log(`[FileStore] getDraft: Attempting to get draft from file "${filePath}"`)
   
   try {
+    // Check if the directory exists
+    const dirPath = path.dirname(filePath)
+    if (!fs.existsSync(dirPath)) {
+      console.warn(`[FileStore] getDraft: Directory ${dirPath} does not exist.`)
+      return null
+    }
+    
+    // List files in directory to help with debugging
+    try {
+      const files = fs.readdirSync(dirPath)
+      console.log(`[FileStore] getDraft: Files in directory ${dirPath}:`, files.join(', '))
+    } catch (readDirError) {
+      console.error(`[FileStore] getDraft: Error reading directory ${dirPath}:`, readDirError)
+    }
+    
     if (!fs.existsSync(filePath)) {
-      console.warn(`[FileStore] getDraft: Draft file not found for ID "${id}".`)
+      console.warn(`[FileStore] getDraft: Draft file not found for ID "${id}" at path "${filePath}".`)
       return null
     }
     
     const content = fs.readFileSync(filePath, 'utf8')
+    console.log(`[FileStore] getDraft: Successfully read file content for draft "${id}".`)
+    
     const draftData = JSON.parse(content)
     
     // Check if draft has expired
