@@ -1,15 +1,27 @@
 import type { DraftInstance } from "@/types/draft"
 import { nanoid } from 'nanoid'
-import { get, has, set } from '@vercel/edge-config'
+import { createClient } from '@vercel/edge-config'
+
+// Create Edge Config client with token if available
+const edgeConfig = process.env.EDGE_CONFIG && process.env.EDGE_CONFIG_TOKEN
+  ? createClient({
+      connectionString: `${process.env.EDGE_CONFIG}_${process.env.EDGE_CONFIG_TOKEN}`
+    })
+  : null
 
 export async function getDraft(id: string): Promise<DraftInstance | null> {
+  if (!edgeConfig) {
+    console.error('[EdgeConfigStore] getDraft: Edge Config client not initialized')
+    return null
+  }
+
   const draftId = id.toUpperCase()
   
   console.log(`[EdgeConfigStore] getDraft: Attempting to get draft "${draftId}"`)
   
   try {
     // Check if drafts container exists
-    const draftsExists = await has('drafts')
+    const draftsExists = await edgeConfig.has('drafts')
     
     if (!draftsExists) {
       console.warn(`[EdgeConfigStore] getDraft: Drafts container not found.`)
@@ -17,7 +29,7 @@ export async function getDraft(id: string): Promise<DraftInstance | null> {
     }
     
     // Get all drafts
-    const drafts = await get<Record<string, DraftInstance>>('drafts')
+    const drafts = await edgeConfig.get<Record<string, DraftInstance>>('drafts')
     
     if (!drafts || !drafts[draftId]) {
       console.warn(`[EdgeConfigStore] getDraft: Draft not found for "${draftId}".`)
