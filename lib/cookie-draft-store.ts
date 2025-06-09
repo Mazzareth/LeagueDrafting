@@ -64,7 +64,8 @@ export async function getDraft(id: string): Promise<DraftInstance | null> {
     // If not in cache, check cookies
     try {
       const cookieStore = cookies()
-      const draftCookie = cookieStore.get(key)
+      // Make sure to await cookies() operations
+      const draftCookie = await cookieStore.get(key)
       
       if (!draftCookie) {
         console.warn(`[CookieStore] getDraft: Draft cookie not found for key "${key}".`)
@@ -76,7 +77,7 @@ export async function getDraft(id: string): Promise<DraftInstance | null> {
       // Check if draft has expired
       if (draftData.expiresAt <= Date.now()) {
         console.warn(`[CookieStore] getDraft: Draft "${id}" has expired.`)
-        cookieStore.delete(key)
+        await cookieStore.delete(key)
         return null
       }
       
@@ -115,7 +116,7 @@ export async function saveDraft(draft: DraftInstance): Promise<void> {
       const serializedData = JSON.stringify(draftData)
       
       // Set the cookie with appropriate options
-      cookieStore.set(key, serializedData, {
+      await cookieStore.set(key, serializedData, {
         expires: new Date(draftData.expiresAt),
         path: '/',
         httpOnly: true,
