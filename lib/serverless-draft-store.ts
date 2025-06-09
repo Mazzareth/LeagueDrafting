@@ -6,8 +6,8 @@ import path from 'path'
 const DRAFT_TTL_SECONDS = 24 * 60 * 60
 
 // Directory to store draft files - use /tmp which is writable in serverless environments
-const BASE_DIR = '/tmp'
-const DRAFTS_DIR = path.join(BASE_DIR, 'league-drafting-drafts')
+// Use a simple flat structure to minimize path issues
+const DRAFTS_DIR = '/tmp'
 
 // Ensure the drafts directory exists
 try {
@@ -29,7 +29,8 @@ const draftCache: Record<string, { data: DraftInstance, expiresAt: number }> = {
 const getDraftKey = (id: string) => `draft_${id.toUpperCase()}`
 
 // Helper function to get the file path for a draft
-const getDraftFilePath = (id: string) => path.join(DRAFTS_DIR, `${getDraftKey(id)}.json`)
+// Use a simple filename without subdirectories
+const getDraftFilePath = (id: string) => path.join(DRAFTS_DIR, `league_draft_${id.toUpperCase()}.json`)
 
 // Cleanup function to remove expired drafts
 const cleanupExpiredDrafts = () => {
@@ -75,21 +76,66 @@ export async function getDraft(id: string): Promise<DraftInstance | null> {
   console.log(`[ServerlessStore] getDraft: Attempting to get draft "${id}" from path "${filePath}"`)
   
   try {
+    // Log the current directory structure
+    console.log(`[ServerlessStore] getDraft: Current directory is ${process.cwd()}`)
+    console.log(`[ServerlessStore] getDraft: DRAFTS_DIR is ${DRAFTS_DIR}`)
+    
     // First check cache for faster access
     const cachedDraft = draftCache[key]
     if (cachedDraft && cachedDraft.expiresAt > Date.now()) {
       console.log(`[ServerlessStore] getDraft: Found draft "${id}" in cache.`)
       return cachedDraft.data
+    } else {
+      console.log(`[ServerlessStore] getDraft: Draft "${id}" not found in cache or expired.`)
+    }
+    
+    // List files in /tmp to help with debugging
+    try {
+      const files = fs.readdirSync('/tmp')
+      console.log(`[ServerlessStore] getDraft: Files in /tmp:`, files.join(', '))
+    } catch (readDirError) {
+      console.error(`[ServerlessStore] getDraft: Error reading /tmp directory:`, readDirError)
     }
     
     // If not in cache or expired, check file system
     if (!fs.existsSync(filePath)) {
-      console.warn(`[ServerlessStore] getDraft: Draft file not found for ID "${id}".`)
+      console.warn(`[ServerlessStore] getDraft: Draft file not found for ID "${id}" at path "${filePath}".`)
+      
+      // Try alternative paths as a fallback
+      const alternativePaths = [
+        path.join('/tmp', `draft_${id.toUpperCase()}.json`),
+        path.join('/tmp', 'league-drafting-drafts', `draft_${id.toUpperCase()}.json`),
+        path.join('/tmp', 'drafts', `draft_${id.toUpperCase()}.json`)
+      ]
+      
+      for (const altPath of alternativePaths) {
+        console.log(`[ServerlessStore] getDraft: Checking alternative path: ${altPath}`)
+        if (fs.existsSync(altPath)) {
+          console.log(`[ServerlessStore] getDraft: Found draft at alternative path: ${altPath}`)
+          try {
+            const content = fs.readFileSync(altPath, 'utf8')
+            const draftData = JSON.parse(content)
+            
+            // Add to cache for faster access next time
+            draftCache[key] = draftData
+            
+            console.log(`[ServerlessStore] getDraft: Successfully loaded draft "${id}" from alternative path.`)
+            return draftData.data
+          } catch (altError) {
+            console.error(`[ServerlessStore] getDraft: Error reading from alternative path:`, altError)
+          }
+        }
+      }
+      
       return null
     }
     
+    console.log(`[ServerlessStore] getDraft: File exists at ${filePath}, attempting to read...`)
     const content = fs.readFileSync(filePath, 'utf8')
+    console.log(`[ServerlessStore] getDraft: Successfully read file content, length: ${content.length} bytes`)
+    
     const draftData = JSON.parse(content)
+    console.log(`[ServerlessStore] getDraft: Successfully parsed JSON data`)
     
     // Check if draft has expired
     if (draftData.expiresAt <= Date.now()) {
@@ -121,9 +167,22 @@ export async function saveDraft(draft: DraftInstance): Promise<void> {
   console.log(`[ServerlessStore] saveDraft: Saving draft "${draft.id}" to file at ${filePath}`)
   
   try {
+    // Log the current directory structure
+    console.log(`[ServerlessStore] saveDraft: Current directory is ${process.cwd()}`)
+    console.log(`[ServerlessStore] saveDraft: DRAFTS_DIR is ${DRAFTS_DIR}`)
+    
     // Make sure the directory exists
     if (!fs.existsSync(DRAFTS_DIR)) {
       fs.mkdirSync(DRAFTS_DIR, { recursive: true })
+      console.log(`[ServerlessStore] saveDraft: Created directory ${DRAFTS_DIR}`)
+    }
+    
+    // List files in /tmp to help with debugging
+    try {
+      const files = fs.readdirSync('/tmp')
+      console.log(`[ServerlessStore] saveDraft: Files in /tmp:`, files.join(', '))
+    } catch (readDirError) {
+      console.error(`[ServerlessStore] saveDraft: Error reading /tmp directory:`, readDirError)
     }
     
     const draftData = {
@@ -131,8 +190,26 @@ export async function saveDraft(draft: DraftInstance): Promise<void> {
       expiresAt: Date.now() + (DRAFT_TTL_SECONDS * 1000)
     }
     
-    // Save to file
-    fs.writeFileSync(filePath, JSON.stringify(draftData, null, 2), 'utf8')
+    // Save to file with detailed error handling
+    try {
+      // Write to a string first to catch JSON stringification errors
+      const jsonData = JSON.stringify(draftData, null, 2)
+      console.log(`[ServerlessStore] saveDraft: JSON data prepared, length: ${jsonData.length} bytes`)
+      
+      // Write to file
+      fs.writeFileSync(filePath, jsonData, 'utf8')
+      
+      // Verify the file was written
+      if (fs.existsSync(filePath)) {
+        const stats = fs.statSync(filePath)
+        console.log(`[ServerlessStore] saveDraft: File written successfully, size: ${stats.size} bytes`)
+      } else {
+        console.error(`[ServerlessStore] saveDraft: File was not created at ${filePath}`)
+      }
+    } catch (writeError) {
+      console.error(`[ServerlessStore] saveDraft: Error writing file:`, writeError)
+      throw writeError
+    }
     
     // Also update cache
     draftCache[key] = draftData
