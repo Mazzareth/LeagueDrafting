@@ -63,12 +63,16 @@ export default async function DraftRoomPage({ params }: { params: { draftId: str
           <ShieldAlert className="h-4 w-4" />
           <AlertTitle>Draft Not Found</AlertTitle>
           <AlertDescription>
-            The draft instance with ID "{draftId}" could not be found. It might have expired, the code could be
-            incorrect, or the server may have restarted if this is a development environment.
+            The draft instance with ID "{draftId}" could not be found. This could be because:
+            <ul className="mt-2 text-left list-disc pl-5">
+              <li>The draft has expired (drafts expire after 24 hours)</li>
+              <li>The draft code was entered incorrectly</li>
+              <li>The draft ID doesn't exist</li>
+            </ul>
           </AlertDescription>
         </Alert>
         <Button asChild className="mt-6">
-          <Link href="/">Create or Join a New Draft</Link>
+          <Link href="/">Create a New Draft</Link>
         </Button>
       </div>
     )
