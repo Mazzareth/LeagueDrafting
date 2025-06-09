@@ -25,12 +25,20 @@ export default async function DraftRoomPage({ params }: { params: { draftId: str
 
   let initialDraftResponse = await getDraftStateAction(draftId)
 
-  // Auto-join logic if the draft exists, red team slot is open, and current user (based on server-side ID) isn't the host.
+  // Auto-join logic:
+  // - Draft must exist and be successfully fetched.
+  // - The draft instance itself must be defined.
+  // - Both blueTeam and redTeam objects must be defined on the draft instance.
+  // - Red team slot must be empty (no player).
+  // - A serverSidePlayerId must be available (user has a cookie).
+  // - The current user (serverSidePlayerId) must not already be the blue team player.
   if (
     initialDraftResponse.success &&
     initialDraftResponse.draftInstance &&
+    initialDraftResponse.draftInstance.blueTeam && // Defensive check
+    initialDraftResponse.draftInstance.redTeam && // Defensive check
     !initialDraftResponse.draftInstance.redTeam.player &&
-    serverSidePlayerId && // Only attempt auto-join if server has a player ID for this user
+    serverSidePlayerId &&
     initialDraftResponse.draftInstance.blueTeam.player?.id !== serverSidePlayerId
   ) {
     console.log(
