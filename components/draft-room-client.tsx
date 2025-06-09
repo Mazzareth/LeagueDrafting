@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Loader2, Copy, Check, ShieldAlert, Swords, CheckCircle } from "lucide-react"
 import ChampionSelector from "./champion-selector"
-import { setPlayerReadyAction, makeSelectionAction, getDraftStateAction } from "@/lib/actions/draft-actions"
+import { setPlayerReadyAction, makeSelectionAction, getDraftStateAction } from "@/lib/actions/new-draft-actions"
 import { Input } from "@/components/ui/input"
 
 interface DraftRoomClientProps {

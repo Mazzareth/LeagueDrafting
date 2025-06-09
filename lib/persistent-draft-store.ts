@@ -1,17 +1,14 @@
 import type { DraftInstance } from "@/types/draft"
 import * as memoryStore from "./draft-store"
-import * as serverlessStore from "./serverless-draft-store"
-import * as kvStore from "./kv-draft-store"
 import * as cookieStore from "./cookie-draft-store"
-import * as dbStore from "./db-draft-store"
+import * as nextStore from "./next-draft-store"
 
 // Detect if we're running in a serverless environment
 const isServerless = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined
 
-// Choose the appropriate store based on environment
-// For serverless environments, try multiple stores in sequence
-const primaryStore = dbStore
-const fallbackStores = [cookieStore, kvStore, memoryStore]
+// Use our new Next.js-based store as the primary store
+const primaryStore = nextStore
+const fallbackStores = [cookieStore, memoryStore]
 
 // This store uses multiple implementations for maximum reliability
 export async function getDraft(id: string): Promise<DraftInstance | null> {

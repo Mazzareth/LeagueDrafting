@@ -1,5 +1,5 @@
 import { cookies } from "next/headers"
-import { getDraftStateAction, joinDraftInstanceAction } from "@/lib/actions/draft-actions"
+import { getDraftStateAction, joinDraftInstanceAction } from "@/lib/actions/new-draft-actions"
 import DraftRoomClient from "@/components/draft-room-client"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { ShieldAlert } from "lucide-react"
@@ -8,16 +8,16 @@ import Link from "next/link"
 
 // Helper to get a player ID from cookies for server-side logic (like auto-join)
 // Client-side will primarily use localStorage.
-function getServerPlayerId(): string | undefined {
-  const cookieStore = cookies()
+async function getServerPlayerId(): Promise<string | undefined> {
+  const cookieStore = await cookies()
   // This ID is mainly for the server to know *if* a user might be returning.
   // The client component will establish its own definitive ID from localStorage.
   return cookieStore.get("lol_drafter_player_id")?.value
 }
 
 export default async function DraftRoomPage({ params }: { params: { draftId: string } }) {
-  const draftId = params.draftId.toUpperCase() // Ensure ID is uppercase
-  const serverSidePlayerId = getServerPlayerId() // This is for the server's context
+  const draftId = (await params).draftId.toUpperCase() // Ensure ID is uppercase
+  const serverSidePlayerId = await getServerPlayerId() // This is for the server's context
 
   console.log(
     `[DraftPage] Loading page for draft "${draftId}". Server-side player ID (from cookie, if any): "${serverSidePlayerId}"`,

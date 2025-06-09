@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { createDraftInstanceAction, joinDraftInstanceAction } from "@/lib/actions/draft-actions"
+import { createDraftInstanceAction, joinDraftInstanceAction } from "@/lib/actions/new-draft-actions"
 import { Loader2, ShieldAlert } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
