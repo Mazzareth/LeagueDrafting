@@ -1,21 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { get, set, getAll } from '@vercel/edge-config'
+import { createClient } from '@vercel/edge-config'
+
+// Create Edge Config client with token if available
+const edgeConfig = process.env.EDGE_CONFIG && process.env.EDGE_CONFIG_TOKEN
+  ? createClient({
+      connectionString: `${process.env.EDGE_CONFIG}_${process.env.EDGE_CONFIG_TOKEN}`
+    })
+  : null
 
 export async function GET(request: NextRequest) {
+  if (!edgeConfig) {
+    return NextResponse.json({ 
+      error: 'Edge Config client not initialized',
+      details: 'Missing EDGE_CONFIG or EDGE_CONFIG_TOKEN environment variables'
+    }, { status: 500 })
+  }
+
   try {
     // Try to get a test value
-    const greeting = await get('greeting')
+    const greeting = await edgeConfig.get('greeting')
     
     // If it doesn't exist, set a default value
     if (greeting === undefined) {
-      await set('greeting', 'Hello from Edge Config!')
+      await edgeConfig.set('greeting', 'Hello from Edge Config!')
       
       // Also set up a test draft config
-      await set('draft_config', {
+      await edgeConfig.set('draft_config', {
         ttlHours: 24,
         maxDraftsPerUser: 5,
         version: '1.0.0'
       })
+      
+      // Initialize empty drafts container
+      await edgeConfig.set('drafts', {})
+      
+      // Initialize empty draft metadata container
+      await edgeConfig.set('draft_meta', {})
       
       return NextResponse.json({ 
         message: 'Edge Config initialized with default values',
@@ -29,13 +49,17 @@ export async function GET(request: NextRequest) {
     }
     
     // Get the draft config
-    const draftConfig = await get('draft_config')
+    const draftConfig = await edgeConfig.get('draft_config')
+    
+    // Get all items for debugging
+    const allItems = await edgeConfig.getAll()
     
     // Return all values
     return NextResponse.json({ 
       message: 'Edge Config is working!',
       greeting,
-      draftConfig
+      draftConfig,
+      allKeys: Object.keys(allItems)
     })
   } catch (error) {
     console.error('Error accessing Edge Config:', error)

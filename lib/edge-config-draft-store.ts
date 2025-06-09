@@ -45,6 +45,11 @@ export async function getDraft(id: string): Promise<DraftInstance | null> {
 }
 
 export async function saveDraft(draft: DraftInstance): Promise<void> {
+  if (!edgeConfig) {
+    console.error('[EdgeConfigStore] saveDraft: Edge Config client not initialized')
+    throw new Error('Edge Config client not initialized')
+  }
+
   const draftId = draft.id.toUpperCase()
   
   draft.updatedAt = Date.now() // Ensure updatedAt is set before saving
@@ -53,11 +58,11 @@ export async function saveDraft(draft: DraftInstance): Promise<void> {
   
   try {
     // Check if drafts container exists
-    const draftsExists = await has('drafts')
+    const draftsExists = await edgeConfig.has('drafts')
     
     // Get current drafts or initialize empty object
     const drafts = draftsExists 
-      ? await get<Record<string, DraftInstance>>('drafts') 
+      ? await edgeConfig.get<Record<string, DraftInstance>>('drafts') 
       : {}
     
     // Update the draft in the collection
@@ -67,12 +72,12 @@ export async function saveDraft(draft: DraftInstance): Promise<void> {
     }
     
     // Save the updated drafts collection
-    await set('drafts', updatedDrafts)
+    await edgeConfig.set('drafts', updatedDrafts)
     
     // Update metadata
-    const metaExists = await has('draft_meta')
+    const metaExists = await edgeConfig.has('draft_meta')
     const meta = metaExists 
-      ? await get<Record<string, { lastUpdated: number, createdAt: number }>>('draft_meta') 
+      ? await edgeConfig.get<Record<string, { lastUpdated: number, createdAt: number }>>('draft_meta') 
       : {}
     
     const updatedMeta = {
@@ -83,7 +88,7 @@ export async function saveDraft(draft: DraftInstance): Promise<void> {
       }
     }
     
-    await set('draft_meta', updatedMeta)
+    await edgeConfig.set('draft_meta', updatedMeta)
     
     console.log(`[EdgeConfigStore] saveDraft: Successfully saved draft "${draftId}".`)
   } catch (error) {
@@ -101,14 +106,19 @@ export function generateDraftId(): string {
 
 // Helper function to list all drafts (for admin purposes)
 export async function listAllDrafts(): Promise<string[]> {
+  if (!edgeConfig) {
+    console.error('[EdgeConfigStore] listAllDrafts: Edge Config client not initialized')
+    return []
+  }
+
   try {
-    const draftsExists = await has('drafts')
+    const draftsExists = await edgeConfig.has('drafts')
     
     if (!draftsExists) {
       return []
     }
     
-    const drafts = await get<Record<string, DraftInstance>>('drafts')
+    const drafts = await edgeConfig.get<Record<string, DraftInstance>>('drafts')
     
     return Object.keys(drafts)
   } catch (error) {
