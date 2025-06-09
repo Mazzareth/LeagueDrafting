@@ -3,8 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "mkdir -p data/drafts",
     "dev": "next dev",
+    "prebuild": "mkdir -p data/drafts",
     "build": "next build",
+    "prestart": "mkdir -p data/drafts",
     "start": "next start",
     "lint": "next lint"
   },

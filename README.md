@@ -1,14 +1,21 @@
-# New Project
+# League Drafting Tool
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+*A tool for League of Legends players to practice and simulate the drafting phase*
 
 [![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/mazzareth/v0-new-project-ckv8mbczwkf)
 [![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/CkV8mBcZwkf)
 
 ## Overview
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+This application allows League of Legends players to practice the drafting phase by creating draft rooms and inviting others to join. The app simulates the pick/ban phase of competitive League of Legends.
+
+## Features
+
+- Create draft rooms as Blue Team
+- Join existing drafts as Red Team using a 6-character code
+- Real-time champion selection and banning
+- Persistent draft state using a custom multi-layer storage system
+- Drafts persist for 24 hours
 
 ## Deployment
 
@@ -16,15 +23,26 @@ Your project is live at:
 
 **[https://vercel.com/mazzareth/v0-new-project-ckv8mbczwkf](https://vercel.com/mazzareth/v0-new-project-ckv8mbczwkf)**
 
-## Build your app
+## Setup
 
-Continue building your app on:
+1. Clone this repository
+2. Install dependencies with `pnpm install`
+3. Run the development server with `pnpm dev`
 
-**[https://v0.dev/chat/projects/CkV8mBcZwkf](https://v0.dev/chat/projects/CkV8mBcZwkf)**
+## Persistence System
+
+The application uses a custom multi-layer persistence system:
+
+1. **In-memory storage**: For fast access during normal operation
+2. **File-based storage**: For persistence across server restarts
+3. **Client-side localStorage**: For additional redundancy on the client
+
+This ensures drafts remain accessible even after server restarts or deployments.
 
 ## How It Works
 
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+1. Users create a draft room which generates a unique 6-character code
+2. The creator becomes the Blue Team
+3. Another user can join using the code and becomes the Red Team
+4. Both players go through the pick/ban phase following competitive rules
+5. Draft state is persisted using our custom storage system
