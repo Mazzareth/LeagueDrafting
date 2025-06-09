@@ -1,41 +1,31 @@
 import type { DraftInstance } from "@/types/draft"
 import { nanoid } from 'nanoid'
-import { get, getAll, has, set, update } from '@vercel/edge-config'
-
-// Prefix for draft keys in Edge Config
-const DRAFT_KEY_PREFIX = 'draft:'
-
-// Helper to create a draft key for Edge Config
-const getDraftKey = (id: string) => `${DRAFT_KEY_PREFIX}${id.toUpperCase()}`
-
-// Helper to create a draft metadata key for Edge Config
-const getDraftMetaKey = (id: string) => `${DRAFT_KEY_PREFIX}${id.toUpperCase()}:meta`
+import { get, has, set } from '@vercel/edge-config'
 
 export async function getDraft(id: string): Promise<DraftInstance | null> {
   const draftId = id.toUpperCase()
-  const draftKey = getDraftKey(draftId)
   
   console.log(`[EdgeConfigStore] getDraft: Attempting to get draft "${draftId}"`)
   
   try {
-    // Check if the draft exists
-    const exists = await has(draftKey)
+    // Check if drafts container exists
+    const draftsExists = await has('drafts')
     
-    if (!exists) {
+    if (!draftsExists) {
+      console.warn(`[EdgeConfigStore] getDraft: Drafts container not found.`)
+      return null
+    }
+    
+    // Get all drafts
+    const drafts = await get<Record<string, DraftInstance>>('drafts')
+    
+    if (!drafts || !drafts[draftId]) {
       console.warn(`[EdgeConfigStore] getDraft: Draft not found for "${draftId}".`)
       return null
     }
     
-    // Get the draft data
-    const draft = await get<DraftInstance>(draftKey)
-    
-    if (!draft) {
-      console.warn(`[EdgeConfigStore] getDraft: Draft data is null for "${draftId}".`)
-      return null
-    }
-    
     console.log(`[EdgeConfigStore] getDraft: Successfully loaded draft "${draftId}".`)
-    return draft
+    return drafts[draftId]
   } catch (error) {
     console.error(`[EdgeConfigStore] getDraft: Error fetching draft "${draftId}":`, error)
     return null
@@ -44,22 +34,44 @@ export async function getDraft(id: string): Promise<DraftInstance | null> {
 
 export async function saveDraft(draft: DraftInstance): Promise<void> {
   const draftId = draft.id.toUpperCase()
-  const draftKey = getDraftKey(draftId)
-  const metaKey = getDraftMetaKey(draftId)
   
   draft.updatedAt = Date.now() // Ensure updatedAt is set before saving
   
   console.log(`[EdgeConfigStore] saveDraft: Saving draft "${draftId}"`)
   
   try {
-    // Save the draft data
-    await set(draftKey, draft)
+    // Check if drafts container exists
+    const draftsExists = await has('drafts')
     
-    // Update metadata (last updated timestamp)
-    await set(metaKey, { 
-      lastUpdated: Date.now(),
-      createdAt: draft.createdAt
-    })
+    // Get current drafts or initialize empty object
+    const drafts = draftsExists 
+      ? await get<Record<string, DraftInstance>>('drafts') 
+      : {}
+    
+    // Update the draft in the collection
+    const updatedDrafts = {
+      ...drafts,
+      [draftId]: draft
+    }
+    
+    // Save the updated drafts collection
+    await set('drafts', updatedDrafts)
+    
+    // Update metadata
+    const metaExists = await has('draft_meta')
+    const meta = metaExists 
+      ? await get<Record<string, { lastUpdated: number, createdAt: number }>>('draft_meta') 
+      : {}
+    
+    const updatedMeta = {
+      ...meta,
+      [draftId]: { 
+        lastUpdated: Date.now(),
+        createdAt: draft.createdAt
+      }
+    }
+    
+    await set('draft_meta', updatedMeta)
     
     console.log(`[EdgeConfigStore] saveDraft: Successfully saved draft "${draftId}".`)
   } catch (error) {
@@ -78,19 +90,15 @@ export function generateDraftId(): string {
 // Helper function to list all drafts (for admin purposes)
 export async function listAllDrafts(): Promise<string[]> {
   try {
-    const allItems = await getAll()
-    const draftKeys: string[] = []
+    const draftsExists = await has('drafts')
     
-    // Filter keys that start with the draft prefix
-    for (const key of Object.keys(allItems)) {
-      if (key.startsWith(DRAFT_KEY_PREFIX) && !key.includes(':meta')) {
-        // Extract the draft ID from the key
-        const draftId = key.substring(DRAFT_KEY_PREFIX.length)
-        draftKeys.push(draftId)
-      }
+    if (!draftsExists) {
+      return []
     }
     
-    return draftKeys
+    const drafts = await get<Record<string, DraftInstance>>('drafts')
+    
+    return Object.keys(drafts)
   } catch (error) {
     console.error('[EdgeConfigStore] listAllDrafts: Error listing drafts:', error)
     return []

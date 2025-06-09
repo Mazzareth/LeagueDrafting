@@ -9,16 +9,33 @@ export async function GET(request: NextRequest) {
     // If it doesn't exist, set a default value
     if (greeting === undefined) {
       await set('greeting', 'Hello from Edge Config!')
+      
+      // Also set up a test draft config
+      await set('draft_config', {
+        ttlHours: 24,
+        maxDraftsPerUser: 5,
+        version: '1.0.0'
+      })
+      
       return NextResponse.json({ 
-        message: 'Edge Config initialized with default greeting',
-        greeting: 'Hello from Edge Config!'
+        message: 'Edge Config initialized with default values',
+        greeting: 'Hello from Edge Config!',
+        config: {
+          ttlHours: 24,
+          maxDraftsPerUser: 5,
+          version: '1.0.0'
+        }
       })
     }
     
-    // Return the greeting
+    // Get the draft config
+    const draftConfig = await get('draft_config')
+    
+    // Return all values
     return NextResponse.json({ 
       message: 'Edge Config is working!',
-      greeting 
+      greeting,
+      draftConfig
     })
   } catch (error) {
     console.error('Error accessing Edge Config:', error)

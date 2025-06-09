@@ -1,12 +1,13 @@
 import type { DraftInstance } from "@/types/draft"
 import * as memoryStore from "./memory-draft-store"
 import * as cookieStore from "./cookie-draft-store"
+import * as edgeConfigStore from "./edge-config-draft-store"
 
 // Detect if we're running in a serverless environment
 const isServerless = process.env.VERCEL === '1' || process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined
 
-// Always use memory store as primary
-const primaryStore = memoryStore
+// Use Edge Config store as primary when available, otherwise fall back to memory store
+const primaryStore = process.env.EDGE_CONFIG ? edgeConfigStore : memoryStore
 const fallbackStores = [cookieStore]
 
 // This store uses multiple implementations for maximum reliability
