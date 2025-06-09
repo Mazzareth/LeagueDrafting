@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { createDraftInstanceAction, joinDraftInstanceAction } from "@/lib/actions/new-draft-actions"
 import { Loader2, ShieldAlert } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { storeDraftInLocalStorage } from "@/lib/client-draft-storage"
 
 // Helper to get or set a player ID in localStorage
 function getOrSetPlayerId(): string {
@@ -39,7 +40,9 @@ export default function HomePage() {
     setIsLoadingCreate(true)
     setError(null)
     const response = await createDraftInstanceAction(playerId)
-    if (response.success && response.draftId) {
+    if (response.success && response.draftId && response.draftInstance) {
+      // Store the draft in localStorage before navigating
+      storeDraftInLocalStorage(response.draftInstance)
       router.push(`/draft/${response.draftId}`)
     } else {
       setError(response.message || "Failed to create draft.")
@@ -64,7 +67,9 @@ export default function HomePage() {
     const draftId = joinCode.trim().toUpperCase()
     const joinResponse = await joinDraftInstanceAction(draftId, playerId)
 
-    if (joinResponse.success) {
+    if (joinResponse.success && joinResponse.draftInstance) {
+      // Store the draft in localStorage before navigating
+      storeDraftInLocalStorage(joinResponse.draftInstance)
       router.push(`/draft/${draftId}`)
     } else {
       setError(joinResponse.message || "Failed to join draft. Code might be invalid or room full.")

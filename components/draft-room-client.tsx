@@ -12,6 +12,7 @@ import { Loader2, Copy, Check, ShieldAlert, Swords, CheckCircle } from "lucide-r
 import ChampionSelector from "./champion-selector"
 import { setPlayerReadyAction, makeSelectionAction, getDraftStateAction } from "@/lib/actions/new-draft-actions"
 import { Input } from "@/components/ui/input"
+import { storeDraftInLocalStorage, getDraftFromLocalStorage, cleanupExpiredDrafts } from "@/lib/client-draft-storage"
 
 interface DraftRoomClientProps {
   initialDraftInstance: DraftInstance
@@ -111,6 +112,16 @@ export default function DraftRoomClient({ initialDraftInstance }: DraftRoomClien
     const pid = getOrSetClientPlayerId()
     setClientPlayerId(pid)
     console.log(`[DraftRoomClient] Effective Player ID for this client: ${pid}`)
+    
+    // Clean up expired drafts from localStorage
+    cleanupExpiredDrafts()
+    
+    // Try to get draft from localStorage first
+    const localDraft = getDraftFromLocalStorage(initialDraftInstance.id)
+    if (localDraft) {
+      console.log(`[DraftRoomClient] Loaded draft from localStorage: ${localDraft.id}`)
+      setDraft(localDraft)
+    }
   }, [])
 
   const playerRole: PlayerRole | null =
@@ -122,6 +133,8 @@ export default function DraftRoomClient({ initialDraftInstance }: DraftRoomClien
     const response = await getDraftStateAction(draft.id)
     if (response.success && response.draftInstance) {
       setDraft(response.draftInstance)
+      // Store the updated draft in localStorage for offline/fallback access
+      storeDraftInLocalStorage(response.draftInstance)
     } else {
       // Avoid setting error if draft just ended or something minor.
       // Only set error if it's a persistent issue.
@@ -148,6 +161,8 @@ export default function DraftRoomClient({ initialDraftInstance }: DraftRoomClien
     const response = await setPlayerReadyAction(draft.id, clientPlayerId, !currentTeam.player?.isReady)
     if (response.success && response.draftInstance) {
       setDraft(response.draftInstance)
+      // Store the updated draft in localStorage
+      storeDraftInLocalStorage(response.draftInstance)
     } else {
       setError(response.message || "Failed to update ready status.")
     }
@@ -164,6 +179,8 @@ export default function DraftRoomClient({ initialDraftInstance }: DraftRoomClien
     const response = await makeSelectionAction(draft.id, clientPlayerId, champion)
     if (response.success && response.draftInstance) {
       setDraft(response.draftInstance)
+      // Store the updated draft in localStorage
+      storeDraftInLocalStorage(response.draftInstance)
     } else {
       setError(response.message || "Failed to make selection.")
     }
